@@ -46,7 +46,7 @@ export default defineComponent({
     const hasFile = ref<boolean>(false);
     const selectedFile = ref<File | null>(null);
     const filePath = ref<string>('');
-    const projectType = ref<string>('PCAdmin');
+    const projectType = ref<string>('PC');
     const isDropdownOpen = ref<boolean>(false);
     const generatedCode = ref<string>(
       '// Your generated prompt will appear here\n// Upload an image to begin'
@@ -229,7 +229,7 @@ export default defineComponent({
       const index = displayLogs.value.length - 1;
       await new Promise((resolve) => setTimeout(resolve, PRINT_SPEED));
       displayLogs.value[index] = log;
-      
+
       // 自动滚动到底部
       setTimeout(() => {
         const logsArea = document.querySelector('.logs-area');
@@ -248,7 +248,7 @@ export default defineComponent({
       generatedCode.value = '';
       logs.value = [];
       displayLogs.value = [];
-      
+
       // 确保日志区域滚动到顶部
       const logsArea = document.querySelector('.logs-area');
       if (logsArea) {
@@ -257,13 +257,12 @@ export default defineComponent({
 
       try {
         // 构建 URL，包含项目类型参数
-        const url = `/api/upload-image?projectType=${encodeURIComponent(
-          projectType.value
-        )}`;
+        const url = `/api/upload-image`;
 
         // 构建 FormData
         const formData = new FormData();
         formData.append('image', selectedFile.value);
+        formData.append('platform', projectType.value);
 
         // 使用 POST 方法上传文件并建立流式连接
         const response = await fetch(url, {
@@ -462,7 +461,7 @@ export default defineComponent({
         <span>PromptCraft</span>
       </div>
       <div class="nav-right">
-        <button class="dashboard-btn">Dashboard</button>
+        <!-- <button class="dashboard-btn">Dashboard</button> -->
       </div>
     </div>
 
@@ -661,7 +660,7 @@ export default defineComponent({
                   }"
                 >
                   <div
-                    v-for="type in ['PCAdmin', 'WebApp']"
+                    v-for="type in ['PC', 'APP']"
                     :key="type"
                     class="dropdown-item"
                     :class="{ selected: projectType === type }"
@@ -734,8 +733,8 @@ export default defineComponent({
             <div v-html="renderedMarkdown"></div>
           </div>
           <div class="editor-footer">
-            <div class="file-info">index.js</div>
-            <div class="line-info">{{ lineCount }} lines</div>
+            <div class="file-info"></div>
+            <div class="line-info">PromptsCraft Web</div>
           </div>
         </div>
       </div>
