@@ -20,34 +20,34 @@ export default defineConfig({
 -->
 
 <script lang="ts">
-import { defineComponent, ref, reactive, onMounted, computed } from "vue";
-import { message } from "ant-design-vue";
-import { UploadOutlined } from "@ant-design/icons-vue";
-import axios from "axios";
-import type { UploadProps, UploadFile } from "ant-design-vue";
+import { defineComponent, ref, reactive, computed } from 'vue';
+import { message } from 'ant-design-vue';
+import axios from 'axios';
+import type { UploadProps, UploadFile } from 'ant-design-vue';
+import { marked } from 'marked';
 
 export default defineComponent({
-  name: "ImageUploader",
+  name: 'ImageUploader',
   setup() {
     const fileList = ref<UploadFile[]>([]);
     const loading = ref<boolean>(false);
-    const imageResult = ref<string>("");
+    const imageResult = ref<string>('');
     const previewVisible = ref<boolean>(false);
-    const previewImage = ref<string>("");
-    const thumbnailUrl = ref<string>("");
-    const selectedAnalysisType = ref<string>("general");
+    const previewImage = ref<string>('');
+    const thumbnailUrl = ref<string>('');
+    const selectedAnalysisType = ref<string>('general');
     const fileInput = ref<HTMLInputElement | null>(null);
     const hasFile = ref<boolean>(false);
     const selectedFile = ref<File | null>(null);
-    const filePath = ref<string>("");
-    const projectType = ref<string>("PCAdmin");
+    const filePath = ref<string>('');
+    const projectType = ref<string>('PCAdmin');
     const isDropdownOpen = ref<boolean>(false);
     const generatedCode = ref<string>(
-      "// Your generated prompt will appear here\n// Upload an image to begin"
+      '// Your generated prompt will appear here\n// Upload an image to begin'
     );
-    const codeEditorTheme = ref<string>("vs-dark");
+    const codeEditorTheme = ref<string>('vs-dark');
     const apiToken = ref<string>(
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJ1c2VybmFtZSI6ImR1Y2FmZWNhdDUiLCJpYXQiOjE2NTk2MjU3MTYsImV4cCI6MTY2MDIzMDUxNn0.3iVVEaTK03XYdYZUX6E6hBXqdLNCv0M7Irf1yHLmWQs"
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJ1c2VybmFtZSI6ImR1Y2FmZWNhdDUiLCJpYXQiOjE2NTk2MjU3MTYsImV4cCI6MTY2MDIzMDUxNn0.3iVVEaTK03XYdYZUX6E6hBXqdLNCv0M7Irf1yHLmWQs'
     );
     const lineCount = ref<number>(2);
 
@@ -55,7 +55,18 @@ export default defineComponent({
       analyzeButtonDisabled: true,
     });
 
-    const handleChange: UploadProps["onChange"] = (info) => {
+    // 添加 marked 配置
+    marked.setOptions({
+      gfm: true,
+      breaks: true,
+    });
+
+    // 添加计算属性用于渲染 markdown
+    const renderedMarkdown = computed(() => {
+      return marked(generatedCode.value);
+    });
+
+    const handleChange: UploadProps['onChange'] = (info) => {
       fileList.value = info.fileList.slice(-1); // Only keep the latest file
 
       // Update button state based on file list
@@ -63,13 +74,13 @@ export default defineComponent({
     };
 
     const beforeUpload = (file: any) => {
-      const isImage = file.type.startsWith("image/");
+      const isImage = file.type.startsWith('image/');
       if (!isImage) {
-        message.error("You can only upload image files!");
+        message.error('You can only upload image files!');
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        message.error("Image must be smaller than 2MB!");
+        message.error('Image must be smaller than 2MB!');
       }
       return isImage && isLt2M;
     };
@@ -77,7 +88,7 @@ export default defineComponent({
     const customRequest = ({ file, onSuccess }: any) => {
       // This prevents actual upload and just adds to fileList
       setTimeout(() => {
-        onSuccess("ok");
+        onSuccess('ok');
       }, 0);
     };
 
@@ -85,7 +96,7 @@ export default defineComponent({
       if (!file.url && !file.preview) {
         file.preview = await getBase64(file.originFileObj!);
       }
-      previewImage.value = file.url || file.preview || "";
+      previewImage.value = file.url || file.preview || '';
       previewVisible.value = true;
     };
 
@@ -134,7 +145,7 @@ export default defineComponent({
     };
 
     const generateThumbnail = (file: File) => {
-      if (!file.type.startsWith("image/")) return;
+      if (!file.type.startsWith('image/')) return;
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -146,14 +157,14 @@ export default defineComponent({
     };
 
     const isValidFile = (file: File): boolean => {
-      const isImage = file.type.startsWith("image/");
+      const isImage = file.type.startsWith('image/');
       if (!isImage) {
-        message.error("You can only upload image files!");
+        message.error('You can only upload image files!');
         return false;
       }
       const isValidSize = file.size / 1024 / 1024 < 2;
       if (!isValidSize) {
-        message.error("Image must be smaller than 2MB!");
+        message.error('Image must be smaller than 2MB!');
         return false;
       }
       return true;
@@ -172,31 +183,31 @@ export default defineComponent({
       if (!selectedFile.value) return;
 
       loading.value = true;
-      imageResult.value = "";
+      imageResult.value = '';
 
       try {
         const formData = new FormData();
-        formData.append("image", selectedFile.value);
+        formData.append('image', selectedFile.value);
 
-        const response = await axios.post("/api/upload-image", formData, {
+        const response = await axios.post('/api/upload-image', formData, {
           headers: {
-            "Content-Type": "multipart/form-data",
+            'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${apiToken.value}`,
           },
         });
 
         const data = response.data;
-        imageResult.value = data.imageResult || "Image analysis complete";
-        generatedCode.value = data.promptText || "No prompt generated";
+        imageResult.value = data.imageResult || 'Image analysis complete';
+        generatedCode.value = data.promptText || 'No prompt generated';
         // Calculate actual line count by splitting on newlines and filtering out empty lines
         lineCount.value = generatedCode.value
-          .split("\n")
-          .filter((line) => line.trim() !== "").length;
+          .split('\n')
+          .filter((line) => line.trim() !== '').length;
 
-        message.success("Image analyzed successfully");
+        message.success('Image analyzed successfully');
       } catch (error) {
-        console.error("Error analyzing image:", error);
-        message.error("Failed to analyze image");
+        console.error('Error analyzing image:', error);
+        message.error('Failed to analyze image');
       } finally {
         loading.value = false;
       }
@@ -207,24 +218,24 @@ export default defineComponent({
         navigator.clipboard
           .writeText(generatedCode.value)
           .then(() => {
-            message.success("Prompt copied to clipboard");
+            message.success('Prompt copied to clipboard');
           })
           .catch((err) => {
-            console.error("Failed to copy: ", err);
-            message.error("Failed to copy prompt");
+            console.error('Failed to copy: ', err);
+            message.error('Failed to copy prompt');
           });
       }
     };
 
     const formatFileSize = (size?: number): string => {
-      if (!size) return "";
+      if (!size) return '';
 
       if (size < 1024) {
-        return size + " B";
+        return size + ' B';
       } else if (size < 1024 * 1024) {
-        return (size / 1024).toFixed(1) + " KB";
+        return (size / 1024).toFixed(1) + ' KB';
       } else {
-        return (size / (1024 * 1024)).toFixed(1) + " MB";
+        return (size / (1024 * 1024)).toFixed(1) + ' MB';
       }
     };
 
@@ -258,6 +269,7 @@ export default defineComponent({
       formatFileSize,
       apiToken,
       lineCount,
+      renderedMarkdown,
     };
   },
 });
@@ -511,7 +523,7 @@ export default defineComponent({
             </div>
           </div>
           <div class="code-area">
-            <pre><code>{{ generatedCode }}</code></pre>
+            <div v-html="renderedMarkdown"></div>
           </div>
           <div class="editor-footer">
             <div class="file-info">index.js</div>
@@ -529,8 +541,8 @@ export default defineComponent({
   min-height: 100vh;
   background-color: #000000;
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   display: flex;
   flex-direction: column;
 }
@@ -632,7 +644,7 @@ export default defineComponent({
 }
 
 .content-right::before {
-  content: "";
+  content: '';
   position: absolute;
   width: 560px;
   height: 560px;
@@ -906,20 +918,132 @@ export default defineComponent({
   flex: 1;
   overflow: auto;
   padding: 22px;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 18px;
   line-height: 1.5;
   color: #d4d4d4;
   background-color: rgba(20, 20, 28, 0.9);
+
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  /* Firefox 滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
-.code-area pre {
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Firefox 全局滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.2);
+}
+
+.code-area :deep(pre) {
   margin: 0;
   white-space: pre-wrap;
 }
 
-.code-area code {
+.code-area :deep(code) {
   font-family: inherit;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.code-area :deep(p) {
+  margin: 0 0 1em 0;
+}
+
+.code-area :deep(h1),
+.code-area :deep(h2),
+.code-area :deep(h3),
+.code-area :deep(h4),
+.code-area :deep(h5),
+.code-area :deep(h6) {
+  margin: 1em 0 0.5em 0;
+  color: #fff;
+}
+
+.code-area :deep(ul),
+.code-area :deep(ol) {
+  margin: 0 0 1em 0;
+  padding-left: 2em;
+}
+
+.code-area :deep(li) {
+  margin: 0.5em 0;
+}
+
+.code-area :deep(blockquote) {
+  margin: 0 0 1em 0;
+  padding-left: 1em;
+  border-left: 4px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.code-area :deep(a) {
+  color: #5a9cf8;
+  text-decoration: none;
+}
+
+.code-area :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.code-area :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 1em 0;
+}
+
+.code-area :deep(th),
+.code-area :deep(td) {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.5em;
+  text-align: left;
+}
+
+.code-area :deep(th) {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .editor-footer {
