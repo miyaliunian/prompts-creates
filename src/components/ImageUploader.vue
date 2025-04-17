@@ -20,9 +20,15 @@ export default defineConfig({
 -->
 
 <script lang="ts">
-import { defineComponent, ref, reactive, computed } from 'vue';
+import {
+  defineComponent,
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onUnmounted,
+} from 'vue';
 import { message } from 'ant-design-vue';
-import axios from 'axios';
 import type { UploadProps, UploadFile } from 'ant-design-vue';
 import { marked } from 'marked';
 
@@ -50,6 +56,12 @@ export default defineComponent({
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJ1c2VybmFtZSI6ImR1Y2FmZWNhdDUiLCJpYXQiOjE2NTk2MjU3MTYsImV4cCI6MTY2MDIzMDUxNn0.3iVVEaTK03XYdYZUX6E6hBXqdLNCv0M7Irf1yHLmWQs'
     );
     const lineCount = ref<number>(2);
+    const logs = ref<string[]>([]);
+    const displayLogs = ref<string[]>([]);
+    const isGenerating = ref<boolean>(false);
+    const dropdownLeft = ref(0);
+    const dropdownTop = ref(0);
+    const dropdownWidth = ref(0);
 
     const state = reactive({
       analyzeButtonDisabled: true,
@@ -172,6 +184,15 @@ export default defineComponent({
 
     const toggleDropdown = () => {
       isDropdownOpen.value = !isDropdownOpen.value;
+      if (isDropdownOpen.value) {
+        updateDropdownPosition();
+        // 添加点击外部关闭功能
+        setTimeout(() => {
+          window.addEventListener('click', handleClickOutside);
+        });
+      } else {
+        window.removeEventListener('click', handleClickOutside);
+      }
     };
 
     const selectProjectType = (type: string) => {
@@ -179,37 +200,150 @@ export default defineComponent({
       isDropdownOpen.value = false;
     };
 
+    const updateDropdownPosition = () => {
+      const trigger = document.querySelector('.select-dropdown') as HTMLElement;
+      if (trigger) {
+        const rect = trigger.getBoundingClientRect();
+        dropdownLeft.value = rect.left + window.scrollX;
+        dropdownTop.value = rect.bottom + window.scrollY + 4;
+        dropdownWidth.value = rect.width;
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const trigger = document.querySelector('.select-dropdown');
+      const dropdown = document.querySelector('.dropdown-menu');
+      if (
+        !trigger?.contains(e.target as Node) &&
+        !dropdown?.contains(e.target as Node)
+      ) {
+        isDropdownOpen.value = false;
+      }
+    };
+
+    // 打印速度（毫秒）
+    const PRINT_SPEED = 500;
+
+    const printLog = async (log: string) => {
+      displayLogs.value.push('');
+      const index = displayLogs.value.length - 1;
+      await new Promise((resolve) => setTimeout(resolve, PRINT_SPEED));
+      displayLogs.value[index] = log;
+      
+      // 自动滚动到底部
+      setTimeout(() => {
+        const logsArea = document.querySelector('.logs-area');
+        if (logsArea) {
+          logsArea.scrollTop = logsArea.scrollHeight;
+        }
+      }, 0);
+    };
+
     const analyzeImage = async () => {
       if (!selectedFile.value) return;
 
       loading.value = true;
+      isGenerating.value = true;
       imageResult.value = '';
+      generatedCode.value = '';
+      logs.value = [];
+      displayLogs.value = [];
+      
+      // 确保日志区域滚动到顶部
+      const logsArea = document.querySelector('.logs-area');
+      if (logsArea) {
+        logsArea.scrollTop = 0;
+      }
 
       try {
+        // 构建 URL，包含项目类型参数
+        const url = `/api/upload-image?projectType=${encodeURIComponent(
+          projectType.value
+        )}`;
+
+        // 构建 FormData
         const formData = new FormData();
         formData.append('image', selectedFile.value);
 
-        const response = await axios.post('/api/upload-image', formData, {
+        // 使用 POST 方法上传文件并建立流式连接
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
           headers: {
-            'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${apiToken.value}`,
           },
         });
 
-        const data = response.data;
-        imageResult.value = data.imageResult || 'Image analysis complete';
-        generatedCode.value = data.promptText || 'No prompt generated';
-        // Calculate actual line count by splitting on newlines and filtering out empty lines
-        lineCount.value = generatedCode.value
-          .split('\n')
-          .filter((line) => line.trim() !== '').length;
+        if (!response.ok) {
+          throw new Error('上传失败');
+        }
 
-        message.success('Image analyzed successfully');
+        // 获取响应的 reader
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+
+        if (!reader) {
+          throw new Error('无法读取响应流');
+        }
+
+        let buffer = '';
+
+        // 读取流数据
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          try {
+            // 将新的数据添加到缓冲区
+            buffer += decoder.decode(value, { stream: true });
+
+            // 按行分割并处理完整的行
+            const lines = buffer.split('\n');
+            // 保留最后一个可能不完整的行
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (!trimmedLine) continue;
+
+              // 解析事件和数据
+              const eventMatch = trimmedLine.match(/^event: (.+)$/);
+              const dataMatch = trimmedLine.match(/^data: (.+)$/);
+
+              if (eventMatch && eventMatch[1] === 'log') {
+                // 等待下一行的 data
+                continue;
+              }
+
+              if (dataMatch) {
+                const data = JSON.parse(dataMatch[1]);
+
+                // 检查前一行是否是 event: log
+                const prevLine = lines[lines.indexOf(trimmedLine) - 1];
+                if (prevLine?.includes('event: log')) {
+                  // 添加日志消息
+                  logs.value.push(data.message);
+                  await printLog(data.message);
+                } else if (prevLine?.includes('event: complete')) {
+                  // 设置最终生成的代码
+                  generatedCode.value = data.promptText;
+                  message.success('提示词生成完成');
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing chunk:', error);
+          }
+        }
       } catch (error) {
         console.error('Error analyzing image:', error);
-        message.error('Failed to analyze image');
+        message.error('图片分析失败');
       } finally {
         loading.value = false;
+        isGenerating.value = false;
       }
     };
 
@@ -238,6 +372,17 @@ export default defineComponent({
         return (size / (1024 * 1024)).toFixed(1) + ' MB';
       }
     };
+
+    onMounted(() => {
+      window.addEventListener('scroll', updateDropdownPosition, true);
+      window.addEventListener('resize', updateDropdownPosition);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('click', handleClickOutside);
+    });
 
     return {
       fileList,
@@ -270,6 +415,12 @@ export default defineComponent({
       apiToken,
       lineCount,
       renderedMarkdown,
+      logs,
+      displayLogs,
+      isGenerating,
+      dropdownLeft,
+      dropdownTop,
+      dropdownWidth,
     };
   },
 });
@@ -393,6 +544,17 @@ export default defineComponent({
             Change file
           </button>
 
+          <div v-if="isGenerating || displayLogs.length > 0" class="logs-area">
+            <div
+              v-for="(log, index) in displayLogs"
+              :key="index"
+              class="log-item"
+              :class="{ 'new-log': index === displayLogs.length - 1 }"
+            >
+              {{ log }}
+            </div>
+          </div>
+
           <button
             class="generate-btn"
             :disabled="!hasFile || loading"
@@ -427,17 +589,52 @@ export default defineComponent({
                 </path>
               </svg>
             </span>
-            <span>Generate</span>
+            <span v-else class="btn-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2L2 7L12 12L22 7L12 2Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M2 17L12 22L22 17"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M2 12L12 17L22 12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span>生成提示词</span>
           </button>
 
           <div class="project-type">
-            <p>Select Project Type</p>
+            <p>选择项目类型</p>
             <div class="select-container">
-              <div class="select-dropdown" @click="toggleDropdown">
+              <div
+                class="select-dropdown"
+                :class="{ active: isDropdownOpen }"
+                @click="toggleDropdown"
+              >
                 <span>{{ projectType }}</span>
                 <svg
-                  width="12"
-                  height="12"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -452,17 +649,28 @@ export default defineComponent({
                 </svg>
               </div>
 
-              <div class="dropdown-menu" v-if="isDropdownOpen">
+              <Teleport to="body">
                 <div
-                  class="dropdown-item"
-                  @click="selectProjectType('PCAdmin')"
+                  v-if="isDropdownOpen"
+                  class="dropdown-menu"
+                  :class="{ active: isDropdownOpen }"
+                  :style="{
+                    left: dropdownLeft + 'px',
+                    top: dropdownTop + 'px',
+                    width: dropdownWidth + 'px',
+                  }"
                 >
-                  PCAdmin
+                  <div
+                    v-for="type in ['PCAdmin', 'WebApp']"
+                    :key="type"
+                    class="dropdown-item"
+                    :class="{ selected: projectType === type }"
+                    @click="selectProjectType(type)"
+                  >
+                    {{ type }}
+                  </div>
                 </div>
-                <div class="dropdown-item" @click="selectProjectType('WebApp')">
-                  WebApp
-                </div>
-              </div>
+              </Teleport>
             </div>
           </div>
         </div>
@@ -662,7 +870,11 @@ export default defineComponent({
 
 .card {
   width: 532px;
-  background-color: rgba(30, 30, 40, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(30, 30, 40, 0.4) 0%,
+    rgba(20, 20, 28, 0.4) 100%
+  );
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
@@ -672,6 +884,26 @@ export default defineComponent({
   height: fit-content;
   max-height: 700px;
   align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 .upload-area {
@@ -680,18 +912,20 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   height: 280px;
-  border: 1px dashed rgba(255, 255, 255, 0.3);
-  border-radius: 11px;
-  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   margin-bottom: 17px;
   position: relative;
+  overflow: hidden;
 }
 
 .upload-area:hover {
-  background-color: rgba(97, 61, 235, 0.1);
-  border-color: rgba(97, 61, 235, 0.5);
+  border-color: #5a9cf8;
+  background: rgba(90, 156, 248, 0.05);
+  transform: translateY(-1px);
 }
 
 .upload-icon {
@@ -786,28 +1020,112 @@ export default defineComponent({
 .generate-btn {
   width: 100%;
   padding: 17px;
-  background-color: #613deb;
+  background: linear-gradient(45deg, #613deb 0%, #5a9cf8 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   color: white;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
-  margin-bottom: 28px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  letter-spacing: 0.5px;
+}
+
+.generate-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.generate-btn::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  top: 0;
+  left: -100%;
+  transition: left 0.5s ease;
 }
 
 .generate-btn:hover:not(:disabled) {
-  background-color: #4f31c2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(97, 61, 235, 0.25);
+}
+
+.generate-btn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.generate-btn:hover:not(:disabled)::after {
+  left: 100%;
+}
+
+.generate-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(97, 61, 235, 0.2);
 }
 
 .generate-btn:disabled {
-  background-color: rgba(97, 61, 235, 0.4);
+  background: linear-gradient(
+    45deg,
+    rgba(97, 61, 235, 0.4) 0%,
+    rgba(90, 156, 248, 0.4) 100%
+  );
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 按钮内部图标样式 */
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.generate-btn:hover:not(:disabled) .btn-icon {
+  transform: scale(1.1);
 }
 
 .project-type {
@@ -815,8 +1133,10 @@ export default defineComponent({
 }
 
 .project-type p {
-  font-size: 20px;
-  margin-bottom: 11px;
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
 }
 
 .select-container {
@@ -828,35 +1148,81 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.select-dropdown:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.select-dropdown svg {
+  transition: transform 0.3s ease;
+}
+
+.select-dropdown.active {
+  border-color: #5a9cf8;
+  background: rgba(90, 156, 248, 0.1);
+}
+
+.select-dropdown.active svg {
+  transform: rotate(180deg);
 }
 
 .dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: #1a1a24;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  margin-top: 4px;
-  overflow: hidden;
-  z-index: 10;
+  position: fixed;
+  background: rgba(30, 30, 40, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  transform-origin: top;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.dropdown-menu.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .dropdown-item {
-  padding: 14px 20px;
+  padding: 12px 14px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 18px;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
 }
 
 .dropdown-item:hover {
-  background-color: rgba(97, 61, 235, 0.2);
+  background: rgba(90, 156, 248, 0.1);
+  color: #fff;
+}
+
+.dropdown-item.selected {
+  color: #5a9cf8;
+  background: rgba(90, 156, 248, 0.1);
+}
+
+.dropdown-item.selected::before {
+  content: '✓';
+  font-weight: bold;
+  margin-right: 4px;
 }
 
 .code-editor-container {
@@ -1057,9 +1423,120 @@ export default defineComponent({
   color: #adbac7;
 }
 
-.loading-spinner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.logs-area {
+  flex: 1;
+  min-height: 150px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #a0a0a0;
+  scroll-behavior: smooth;
+  position: relative;
+  z-index: 1;
+}
+
+.logs-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 30px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 12px 12px 0 0;
+}
+
+.logs-area::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 30px;
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 0 0 12px 12px;
+}
+
+.log-item {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.log-item::before {
+  content: '>';
+  color: #5a9cf8;
+  font-weight: bold;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.log-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.log-item:hover::before {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.new-log {
+  opacity: 1;
+  color: #fff;
+  background: rgba(90, 156, 248, 0.05);
+  border-color: rgba(90, 156, 248, 0.1);
+  transform: translateX(4px);
+}
+
+.new-log::before {
+  opacity: 1;
+  color: #5a9cf8;
+}
+
+/* 自定义滚动条 */
+.logs-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.logs-area::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.logs-area::-webkit-scrollbar-thumb {
+  background: rgba(90, 156, 248, 0.2);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.logs-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 156, 248, 0.3);
 }
 </style>
