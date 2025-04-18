@@ -49,7 +49,7 @@ export default defineComponent({
     const projectType = ref<string>('PC');
     const isDropdownOpen = ref<boolean>(false);
     const generatedCode = ref<string>(
-      '// Your generated prompt will appear here\n// Upload an image to begin'
+      '// AI 提示词将在这里展示\n// 上传界面截图，快速获取专业提示词'
     );
     const codeEditorTheme = ref<string>('vs-dark');
     const apiToken = ref<string>(
@@ -88,11 +88,11 @@ export default defineComponent({
     const beforeUpload = (file: any) => {
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
-        message.error('You can only upload image files!');
+        message.error('只能上传图片文件！');
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
-        message.error('Image must be smaller than 2MB!');
+        message.error('图片必须小于2MB！');
       }
       return isImage && isLt2M;
     };
@@ -171,12 +171,12 @@ export default defineComponent({
     const isValidFile = (file: File): boolean => {
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
-        message.error('You can only upload image files!');
+        message.error('只能上传图片文件！');
         return false;
       }
       const isValidSize = file.size / 1024 / 1024 < 2;
       if (!isValidSize) {
-        message.error('Image must be smaller than 2MB!');
+        message.error('图片必须小于2MB！');
         return false;
       }
       return true;
@@ -351,11 +351,11 @@ export default defineComponent({
         navigator.clipboard
           .writeText(generatedCode.value)
           .then(() => {
-            message.success('Prompt copied to clipboard');
+            message.success('提示词已复制到剪贴板');
           })
           .catch((err) => {
             console.error('Failed to copy: ', err);
-            message.error('Failed to copy prompt');
+            message.error('复制提示词失败');
           });
       }
     };
@@ -458,20 +458,23 @@ export default defineComponent({
             stroke-linejoin="round"
           />
         </svg>
-        <span>PromptCraft</span>
+        <div class="logo-text">
+          <span class="company-name">君南圣达</span>
+          <div class="logo-divider"></div>
+          <span class="product-name">提示词工坊</span>
+        </div>
       </div>
       <div class="nav-right">
-        <!-- <button class="dashboard-btn">Dashboard</button> -->
+        <!-- <button class="dashboard-btn">仪表盘</button> -->
       </div>
     </div>
 
     <div class="main-section">
       <div class="content-left">
         <div class="headline">
-          <h1>Create powerful prompts for AI coding tools</h1>
+          <h1>AI编程助手的智能提示词生成器</h1>
           <p class="subheading">
-            Built for the next generation of AI coders. Upload images of full
-            applications.
+            专为开发者打造，只需上传界面截图，即可生成专业的AI编程提示词
           </p>
         </div>
       </div>
@@ -514,7 +517,7 @@ export default defineComponent({
                   v-if="thumbnailUrl"
                   :src="thumbnailUrl"
                   class="thumbnail-image"
-                  alt="Thumbnail"
+                  alt="预览图"
                 />
               </div>
               <div class="file-info">
@@ -524,8 +527,8 @@ export default defineComponent({
                 </p>
               </div>
             </div>
-            <p v-if="!hasFile" class="drag-text">Drag & drop your image here</p>
-            <p v-if="!hasFile" class="click-text">or click to select a file</p>
+            <p v-if="!hasFile" class="drag-text">拖拽图片到这里</p>
+            <p v-if="!hasFile" class="click-text">或点击选择文件</p>
             <input
               type="file"
               ref="fileInput"
@@ -540,7 +543,7 @@ export default defineComponent({
             class="change-file-btn"
             @click="triggerFileInput"
           >
-            Change file
+            更换文件
           </button>
 
           <div v-if="isGenerating || displayLogs.length > 0" class="logs-area">
@@ -699,7 +702,7 @@ export default defineComponent({
                   stroke-linejoin="round"
                 />
               </svg>
-              <span>Generated Prompt</span>
+              <span>生成的提示词</span>
             </div>
             <div class="editor-actions">
               <button class="action-button" @click="copyToClipboard">
@@ -725,7 +728,7 @@ export default defineComponent({
                     stroke-linejoin="round"
                   />
                 </svg>
-                Copy
+                复制
               </button>
             </div>
           </div>
@@ -734,7 +737,7 @@ export default defineComponent({
           </div>
           <div class="editor-footer">
             <div class="file-info"></div>
-            <div class="line-info">PromptsCraft Web</div>
+            <div class="line-info">提示词工坊</div>
           </div>
         </div>
       </div>
@@ -758,8 +761,17 @@ export default defineComponent({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 16px max(24px, 5%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 10;
+  flex: 0 0 auto;
 }
 
 .logo {
@@ -767,6 +779,47 @@ export default defineComponent({
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  position: relative;
+}
+
+.logo-text {
+  display: flex;
+  align-items: center;
+}
+
+.company-name {
+  font-size: 22px;
+  font-weight: 600;
+  background: linear-gradient(45deg, #ffffff 0%, #5A9CF8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+  position: relative;
+  padding: 4px 12px 4px 0;
+  transition: all 0.3s ease;
+}
+
+.logo-divider {
+  width: 2px;
+  height: 24px;
+  background: linear-gradient(
+    to bottom,
+    rgba(90, 156, 248, 0.2) 0%,
+    rgba(97, 61, 235, 0.2) 100%
+  );
+  margin: 0 16px;
+  border-radius: 1px;
+}
+
+.product-name {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.product-name:hover {
+  color: #ffffff;
 }
 
 .nav-right {
@@ -785,69 +838,58 @@ export default defineComponent({
 }
 
 .main-section {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
-  padding: 80px 140px 80px 30px;
-  gap: 60px;
+  padding: clamp(40px, 5vh, 80px) clamp(20px, 5vw, 80px);
+  gap: clamp(30px, 4vw, 60px);
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   max-width: 1800px;
   margin: 0 auto;
-  height: calc(100vh - 73px);
+  width: 100%;
+  min-height: calc(100vh - 73px);
 }
 
 .content-left {
-  flex: 1;
+  flex: 1 1 40%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-width: 650px;
-  padding-right: 20px;
-  padding-left: 0;
-  height: 700px;
-  margin-left: 0;
+  min-width: 300px;
+  max-width: 750px;
+  padding: 0 clamp(20px, 3vw, 40px);
 }
 
 .headline {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  text-align: left;
+  gap: clamp(20px, 3vh, 35px);
 }
 
 .headline h1 {
-  font-size: 52px;
-  line-height: 1.1;
-  margin-bottom: 30px;
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.2;
   font-weight: 700;
-  width: 100%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  max-width: 600px;
-  display: inline-block;
+  background: linear-gradient(45deg, #ffffff 0%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
 }
 
 .subheading {
-  font-size: 20px;
-  line-height: 1.4;
+  font-size: clamp(16px, 2vw, 22px);
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 0;
-  width: 100%;
-  max-width: 580px;
+  letter-spacing: 0.2px;
 }
 
 .content-right {
-  flex: 3;
+  flex: 1 1 60%;
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
-  position: relative;
-  padding-left: 0;
-  margin-left: 0;
-  gap: 100px;
-  height: 700px;
+  gap: clamp(40px, 5vw, 80px);
+  min-width: 320px;
 }
 
 .content-right::before {
@@ -868,7 +910,8 @@ export default defineComponent({
 }
 
 .card {
-  width: 532px;
+  flex: 0 1 480px;
+  min-width: 300px;
   background: linear-gradient(
     180deg,
     rgba(30, 30, 40, 0.4) 0%,
@@ -877,17 +920,12 @@ export default defineComponent({
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 34px;
+  padding: clamp(20px, 3vw, 30px);
   z-index: 1;
   box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
-  height: fit-content;
-  max-height: 700px;
-  align-self: center;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  position: relative;
-  overflow: hidden;
 }
 
 .card::before {
@@ -910,7 +948,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 280px;
+  height: 260px;
   border: 1px dashed rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.2);
@@ -1225,17 +1263,14 @@ export default defineComponent({
 }
 
 .code-editor-container {
-  width: 630px;
-  height: 700px;
+  flex: 0 1 580px;
+  min-width: 300px;
+  height: clamp(500px, 70vh, 700px);
   background-color: rgba(22, 22, 30, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  z-index: 1;
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
-  align-self: center;
 }
 
 .editor-header {
@@ -1253,6 +1288,15 @@ export default defineComponent({
   gap: 11px;
   font-weight: 500;
   font-size: 20px;
+  
+  svg {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+  
+  &:hover svg {
+    opacity: 1;
+  }
 }
 
 .editor-actions {
@@ -1288,6 +1332,25 @@ export default defineComponent({
   line-height: 1.5;
   color: #d4d4d4;
   background-color: rgba(20, 20, 28, 0.9);
+  position: relative;
+
+  &::before {
+    content: '等待生成...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:empty::before {
+    opacity: 1;
+  }
 
   /* 自定义滚动条样式 */
   &::-webkit-scrollbar {
@@ -1537,5 +1600,46 @@ export default defineComponent({
 
 .logs-area::-webkit-scrollbar-thumb:hover {
   background: rgba(90, 156, 248, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .main-section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .content-left {
+    text-align: center;
+    align-items: center;
+    padding: 0;
+  }
+
+  .content-right {
+    flex-direction: column;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .card, .code-editor-container {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 12px 16px;
+  }
+
+  .logo-text {
+    font-size: 16px;
+  }
+
+  .company-name {
+    font-size: 18px;
+  }
+
+  .product-name {
+    font-size: 16px;
+  }
 }
 </style>
