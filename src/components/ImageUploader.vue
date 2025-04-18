@@ -1,24 +1,3 @@
-<!-- 
-Create a file named vite.config.ts in your project root (or edit if it exists)
-with the following content:
-
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-
-export default defineConfig({
-  plugins: [vue()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      }
-    }
-  }
-})
--->
-
 <script lang="ts">
 import {
   defineComponent,
@@ -572,21 +551,14 @@ export default defineComponent({
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  d="M12 2L2 7L12 12L22 7L12 2Z"
+                  d="M4 19.5C4 18.837 4.26339 18.2011 4.73223 17.7322C5.20107 17.2634 5.83696 17 6.5 17H20"
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
                 <path
-                  d="M2 17L12 22L22 17"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M2 12L12 17L22 12"
+                  d="M6.5 2H20V22H6.5C5.83696 22 5.20107 21.7366 4.73223 21.2678C4.26339 20.7989 4 20.163 4 19.5V4.5C4 3.83696 4.26339 3.20107 4.73223 2.73223C5.20107 2.26339 5.83696 2 6.5 2Z"
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
@@ -721,7 +693,10 @@ export default defineComponent({
 .app-container {
   width: 100%;
   min-height: 100vh;
-  background-color: #000000;
+  background-image: url('../assets/placeholder.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -758,6 +733,7 @@ export default defineComponent({
   width: 80px;
   height: auto;
   margin-right: 4px;
+  filter: brightness(0) invert(1);
 }
 
 .logo-text {
@@ -768,9 +744,7 @@ export default defineComponent({
 .company-name {
   font-size: 26px;
   font-weight: 600;
-  background: linear-gradient(45deg, #ffffff 0%, #5A9CF8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
   letter-spacing: 0.5px;
   position: relative;
   padding: 4px 12px 4px 0;
@@ -1244,11 +1218,21 @@ export default defineComponent({
   flex: 0 1 580px;
   min-width: 300px;
   height: clamp(500px, 70vh, 700px);
-  background-color: rgba(22, 22, 30, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background-color: rgba(22, 22, 30, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 15px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2),
+              inset 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+}
+
+.code-editor-container:hover {
+  border-color: #5a9cf8;
+  background: rgba(90, 156, 248, 0.05);
+  transform: translateY(-1px);
 }
 
 .editor-header {
@@ -1256,8 +1240,9 @@ export default defineComponent({
   justify-content: space-between;
   align-items: center;
   padding: 20px 22px;
-  background-color: rgba(35, 35, 45, 0.8);
+  background-color: rgba(35, 35, 45, 0.4);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px 15px 0 0;
 }
 
 .editor-title {
@@ -1309,147 +1294,9 @@ export default defineComponent({
   font-size: 18px;
   line-height: 1.5;
   color: #d4d4d4;
-  background-color: rgba(20, 20, 28, 0.9);
+  background-color: rgba(20, 20, 28, 0.3);
   position: relative;
-
-  &::before {
-    content: '等待生成...';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: rgba(255, 255, 255, 0.3);
-    font-size: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  &:empty::before {
-    opacity: 1;
-  }
-
-  /* 自定义滚动条样式 */
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    transition: background 0.2s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  /* Firefox 滚动条样式 */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
-}
-
-/* 全局滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-}
-
-/* Firefox 全局滚动条样式 */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.2);
-}
-
-.code-area :deep(pre) {
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.code-area :deep(code) {
-  font-family: inherit;
-  background-color: rgba(0, 0, 0, 0.2);
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-
-.code-area :deep(p) {
-  margin: 0 0 1em 0;
-}
-
-.code-area :deep(h1),
-.code-area :deep(h2),
-.code-area :deep(h3),
-.code-area :deep(h4),
-.code-area :deep(h5),
-.code-area :deep(h6) {
-  margin: 1em 0 0.5em 0;
-  color: #fff;
-}
-
-.code-area :deep(ul),
-.code-area :deep(ol) {
-  margin: 0 0 1em 0;
-  padding-left: 2em;
-}
-
-.code-area :deep(li) {
-  margin: 0.5em 0;
-}
-
-.code-area :deep(blockquote) {
-  margin: 0 0 1em 0;
-  padding-left: 1em;
-  border-left: 4px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.code-area :deep(a) {
-  color: #5a9cf8;
-  text-decoration: none;
-}
-
-.code-area :deep(a:hover) {
-  text-decoration: underline;
-}
-
-.code-area :deep(table) {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 0 0 1em 0;
-}
-
-.code-area :deep(th),
-.code-area :deep(td) {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.5em;
-  text-align: left;
-}
-
-.code-area :deep(th) {
-  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 15px 15px;
 }
 
 .editor-footer {
@@ -1461,6 +1308,7 @@ export default defineComponent({
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 17px;
   color: #adbac7;
+  border-radius: 0 0 15px 15px;
 }
 
 .logs-area {
