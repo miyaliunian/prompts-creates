@@ -429,35 +429,7 @@ export default defineComponent({
   <div class="app-container">
     <div class="navbar">
       <div class="logo">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 2L2 7L12 12L22 7L12 2Z"
-            stroke="#5A9CF8"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M2 17L12 22L22 17"
-            stroke="#5A9CF8"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M2 12L12 17L22 12"
-            stroke="#5A9CF8"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <img src="../assets/logo.svg" alt="Logo" />
         <div class="logo-text">
           <span class="company-name">君南圣达</span>
           <div class="logo-divider"></div>
@@ -782,13 +754,19 @@ export default defineComponent({
   position: relative;
 }
 
+.logo img {
+  width: 80px;
+  height: auto;
+  margin-right: 4px;
+}
+
 .logo-text {
   display: flex;
   align-items: center;
 }
 
 .company-name {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
   background: linear-gradient(45deg, #ffffff 0%, #5A9CF8 100%);
   -webkit-background-clip: text;
