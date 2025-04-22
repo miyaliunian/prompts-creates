@@ -1312,9 +1312,9 @@ export default defineComponent({
 }
 
 .logs-area {
-  flex: 1;
+  height: 150px;
   min-height: 150px;
-  max-height: 200px;
+  max-height: 150px;
   overflow-y: auto;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
