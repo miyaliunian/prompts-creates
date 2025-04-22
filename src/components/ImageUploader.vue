@@ -28,9 +28,18 @@ export default defineComponent({
     const projectType = ref<string>('PC');
     const isDropdownOpen = ref<boolean>(false);
     const generatedCode = ref<string>(
-      '// AI 提示词将在这里展示\n// 上传界面截图，快速获取专业提示词'
+      `# 🚀 智能提示词生成器
+
+        > 上传您的界面截图，AI 将自动分析并生成专业提示词。
+
+        ## 使用方法：
+        1. 在左侧上传界面设计图或截图
+        2. 选择项目类型（PC 或 APP）
+        3. 点击"生成提示词"按钮
+        4. 获取为您量身定制的 AI 编程提示词
+
+        提示词将帮助您高效地将设计转化为代码，节省开发时间。`
     );
-    const codeEditorTheme = ref<string>('vs-dark');
     const apiToken = ref<string>(
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2LCJ1c2VybmFtZSI6ImR1Y2FmZWNhdDUiLCJpYXQiOjE2NTk2MjU3MTYsImV4cCI6MTY2MDIzMDUxNn0.3iVVEaTK03XYdYZUX6E6hBXqdLNCv0M7Irf1yHLmWQs'
     );
@@ -957,7 +966,7 @@ export default defineComponent({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 260px;
+  height: 320px;
   border: 1px dashed rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.2);
@@ -977,12 +986,18 @@ export default defineComponent({
 .upload-icon {
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-  width: 67px;
-  height: 67px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover .upload-icon {
+  background-color: rgba(90, 156, 248, 0.15);
+  transform: translateY(-5px);
 }
 
 .file-selected-container {
@@ -1001,29 +1016,39 @@ export default defineComponent({
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-height: 70%;
+  max-height: 85%;
   overflow: hidden;
+  margin-bottom: 15px;
 }
 
 .thumbnail-image {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 6px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.thumbnail-preview:hover .thumbnail-image {
+  transform: scale(1.03);
 }
 
 .file-info {
-  margin-top: 10px;
   text-align: center;
+  width: 100%;
+  padding: 0 20px;
 }
 
 .file-name {
   font-size: 18px;
+  font-weight: 500;
   margin-bottom: 6px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: white;
 }
 
 .file-size {
@@ -1054,13 +1079,14 @@ export default defineComponent({
 }
 
 .drag-text {
-  font-size: 22px;
-  margin-bottom: 6px;
+  font-size: 24px;
+  margin-bottom: 10px;
+  font-weight: 500;
 }
 
 .click-text {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .generate-btn {
@@ -1437,6 +1463,20 @@ export default defineComponent({
   font-size: 17px;
   color: #adbac7;
   border-radius: 0 0 15px 15px;
+  min-height: 50px;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.line-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.5px;
 }
 
 .logs-area {
