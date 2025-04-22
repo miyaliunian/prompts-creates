@@ -200,6 +200,36 @@ export default defineComponent({
       }
     };
 
+    // 图片预览功能
+    const openImagePreview = () => {
+      if (thumbnailUrl.value) {
+        previewImage.value = thumbnailUrl.value;
+        previewVisible.value = true;
+        
+        // 添加键盘事件监听，按Esc键关闭预览
+        document.addEventListener('keydown', handleEscKeydown);
+        
+        // 禁止滚动
+        document.body.style.overflow = 'hidden';
+      }
+    };
+    
+    const closeImagePreview = () => {
+      previewVisible.value = false;
+      
+      // 移除键盘事件监听
+      document.removeEventListener('keydown', handleEscKeydown);
+      
+      // 恢复滚动
+      document.body.style.overflow = '';
+    };
+    
+    const handleEscKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeImagePreview();
+      }
+    };
+
     // 打印速度（毫秒）
     const PRINT_SPEED = 500;
 
@@ -360,6 +390,9 @@ export default defineComponent({
       window.removeEventListener('scroll', updateDropdownPosition, true);
       window.removeEventListener('resize', updateDropdownPosition);
       window.removeEventListener('click', handleClickOutside);
+      
+      // 移除ESC键事件监听（如果存在）
+      document.removeEventListener('keydown', handleEscKeydown);
     });
 
     return {
@@ -399,6 +432,8 @@ export default defineComponent({
       dropdownLeft,
       dropdownTop,
       dropdownWidth,
+      openImagePreview,
+      closeImagePreview,
     };
   },
 });
@@ -434,7 +469,7 @@ export default defineComponent({
         <div class="card">
           <div
             class="upload-area"
-            @click="triggerFileInput"
+            @click="!hasFile ? triggerFileInput() : null"
             @dragover.prevent
             @drop.prevent="handleFileDrop"
           >
@@ -463,7 +498,7 @@ export default defineComponent({
               </svg>
             </div>
             <div v-if="hasFile" class="file-selected-container">
-              <div class="thumbnail-preview">
+              <div class="thumbnail-preview" @click.stop="openImagePreview">
                 <img
                   v-if="thumbnailUrl"
                   :src="thumbnailUrl"
@@ -488,6 +523,26 @@ export default defineComponent({
               @change="handleFileChange"
             />
           </div>
+          
+          <!-- 图片预览模态框 -->
+          <Teleport to="body">
+            <div v-if="previewVisible" class="image-preview-modal" @click="closeImagePreview">
+              <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                  <span class="modal-title">图片预览</span>
+                  <button class="close-btn" @click="closeImagePreview">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <img :src="previewImage" alt="图片预览" class="preview-image" />
+                </div>
+              </div>
+            </div>
+          </Teleport>
 
           <button
             v-if="hasFile"
@@ -803,12 +858,12 @@ export default defineComponent({
 }
 
 .content-left {
-  flex: 1 1 40%;
+  flex: 1 1 35%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 300px;
-  max-width: 750px;
+  max-width: 600px;
   padding: 0 clamp(20px, 3vw, 40px);
 }
 
@@ -819,7 +874,7 @@ export default defineComponent({
 }
 
 .headline h1 {
-  font-size: clamp(32px, 5vw, 56px);
+  font-size: clamp(28px, 4vw, 48px);
   line-height: 1.2;
   font-weight: 700;
   background: linear-gradient(45deg, #ffffff 0%, #e0e0e0 100%);
@@ -829,19 +884,20 @@ export default defineComponent({
 }
 
 .subheading {
-  font-size: clamp(16px, 2vw, 22px);
+  font-size: clamp(15px, 1.8vw, 20px);
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.8);
   letter-spacing: 0.2px;
 }
 
 .content-right {
-  flex: 1 1 60%;
+  flex: 1 1 65%;
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: clamp(40px, 5vw, 80px);
+  align-items: stretch;
+  gap: clamp(30px, 3vw, 50px);
   min-width: 320px;
+  position: relative;
 }
 
 .content-right::before {
@@ -862,8 +918,8 @@ export default defineComponent({
 }
 
 .card {
-  flex: 0 1 480px;
-  min-width: 300px;
+  flex: 0 1 400px;
+  min-width: 280px;
   background: linear-gradient(
     180deg,
     rgba(30, 30, 40, 0.4) 0%,
@@ -878,6 +934,7 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-self: center;
 }
 
 .card::before {
@@ -1215,31 +1272,54 @@ export default defineComponent({
 }
 
 .code-editor-container {
-  flex: 0 1 580px;
-  min-width: 300px;
-  height: clamp(500px, 70vh, 700px);
+  flex: 1 1 620px;
+  min-width: 320px;
+  max-width: 850px;
+  height: clamp(550px, 75vh, 750px);
   background-color: rgba(22, 22, 30, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 15px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2),
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
               inset 0 0 1px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+  align-self: center;
+}
+
+.code-editor-container::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(
+    circle,
+    rgba(90, 156, 248, 0.15) 0%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .code-editor-container:hover {
   border-color: #5a9cf8;
   background: rgba(90, 156, 248, 0.05);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 50px rgba(97, 61, 235, 0.25),
+              inset 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 22px;
+  padding: 20px 24px;
   background-color: rgba(35, 35, 45, 0.4);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 15px 15px 0 0;
@@ -1248,18 +1328,18 @@ export default defineComponent({
 .editor-title {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   font-weight: 500;
-  font-size: 20px;
-  
-  svg {
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-  }
-  
-  &:hover svg {
-    opacity: 1;
-  }
+  font-size: 22px;
+}
+
+.editor-title svg {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.editor-title:hover svg {
+  opacity: 1;
 }
 
 .editor-actions {
@@ -1272,24 +1352,29 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: rgba(97, 61, 235, 0.2);
+  background-color: rgba(97, 61, 235, 0.25);
   border: 1px solid rgba(97, 61, 235, 0.3);
   color: white;
-  padding: 8px 17px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
   font-size: 18px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .action-button:hover {
-  background-color: rgba(97, 61, 235, 0.3);
+  background-color: rgba(97, 61, 235, 0.4);
+  transform: translateY(-1px);
+}
+
+.action-button:active {
+  transform: translateY(0);
 }
 
 .code-area {
   flex: 1;
   overflow: auto;
-  padding: 22px;
+  padding: 26px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 18px;
   line-height: 1.5;
@@ -1299,11 +1384,54 @@ export default defineComponent({
   border-radius: 0 0 15px 15px;
 }
 
+.code-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.code-area::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.code-area::-webkit-scrollbar-thumb {
+  background: rgba(90, 156, 248, 0.2);
+  border-radius: 4px;
+}
+
+.code-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 156, 248, 0.3);
+}
+
+/* Make rendered markdown text more readable */
+.code-area div {
+  color: #e6e6e6;
+  line-height: 1.6;
+}
+
+.code-area div p {
+  margin-bottom: 16px;
+}
+
+.code-area div pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 6px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.code-area div code {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
 .editor-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 11px 22px;
+  padding: 14px 24px;
   background-color: rgba(35, 35, 45, 0.8);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 17px;
@@ -1428,26 +1556,54 @@ export default defineComponent({
   background: rgba(90, 156, 248, 0.3);
 }
 
+@media (max-width: 1280px) {
+  .main-section {
+    gap: 40px;
+  }
+  
+  .content-right {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .card, .code-editor-container {
+    flex: 1;
+    width: 100%;
+    max-width: 800px;
+  }
+  
+  .code-editor-container {
+    height: clamp(500px, 60vh, 650px);
+  }
+}
+
 @media (max-width: 1024px) {
   .main-section {
     flex-direction: column;
     align-items: center;
+    padding: 30px 20px;
   }
 
   .content-left {
     text-align: center;
     align-items: center;
     padding: 0;
+    max-width: 800px;
+    margin-bottom: 20px;
+  }
+
+  .headline h1 {
+    font-size: clamp(28px, 6vw, 40px);
   }
 
   .content-right {
-    flex-direction: column;
     width: 100%;
     max-width: 800px;
   }
-
-  .card, .code-editor-container {
-    width: 100%;
+  
+  .code-editor-container {
+    order: -1; /* Show code editor first on mobile */
+    margin-bottom: 30px;
   }
 }
 
@@ -1467,5 +1623,142 @@ export default defineComponent({
   .product-name {
     font-size: 16px;
   }
+  
+  .code-editor-container {
+    height: clamp(450px, 60vh, 550px);
+  }
+  
+  .editor-title {
+    font-size: 18px;
+  }
+  
+  .action-button {
+    padding: 8px 16px;
+    font-size: 16px;
+  }
+}
+
+/* Adding pulsating highlight to the code editor container for emphasis */
+@keyframes soft-pulse {
+  0% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
+                inset 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 10px 40px rgba(97, 61, 235, 0.2),
+                inset 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+  100% {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
+                inset 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.code-editor-container {
+  animation: soft-pulse 6s infinite ease-in-out;
+}
+
+/* 图片预览模态框样式 */
+.image-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 95%;
+  max-width: 1200px;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  animation: fade-in 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: white;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: calc(95vh - 70px);
+  height: calc(95vh - 120px);
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: calc(95vh - 120px);
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 增强缩略图预览的交互效果 */
+.thumbnail-preview {
+  cursor: zoom-in !important;
+  transition: transform 0.2s ease;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+.thumbnail-preview:hover {
+  transform: scale(1.02);
+  border-color: rgba(90, 156, 248, 0.5);
 }
 </style>
